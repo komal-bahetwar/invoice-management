@@ -8,7 +8,7 @@ namespace InvoiceManagement.Modules.Invoicing.Domain.Entities;
 /// <summary>
 /// Invoice aggregate root. Owns line items and enforces status lifecycle invariants.
 /// </summary>
-public sealed class Invoice : BaseEntity
+public sealed class Invoice : TenantEntity
 {
     private readonly List<InvoiceLineItem> _lineItems = [];
 
@@ -45,6 +45,7 @@ public sealed class Invoice : BaseEntity
         Guid tenantId)
     {
         Id = Guid.NewGuid();
+        TenantId = tenantId;
         InvoiceNumber = invoiceNumber;
         CustomerName = customerName;
         CustomerEmail = customerEmail;
@@ -136,7 +137,7 @@ public sealed class Invoice : BaseEntity
         UpdatedAt = DateTimeOffset.UtcNow;
 
         AddDomainEvent(new InvoiceStatusChangedDomainEvent(
-            Id, Guid.Empty, InvoiceNumber.Value, oldStatus, Status));
+            Id, TenantId, InvoiceNumber.Value, oldStatus, Status));
 
         return Result.Success();
     }
@@ -154,7 +155,7 @@ public sealed class Invoice : BaseEntity
         UpdatedAt = DateTimeOffset.UtcNow;
 
         AddDomainEvent(new InvoiceStatusChangedDomainEvent(
-            Id, Guid.Empty, InvoiceNumber.Value, oldStatus, Status));
+            Id, TenantId, InvoiceNumber.Value, oldStatus, Status));
 
         return Result.Success();
     }
@@ -175,9 +176,9 @@ public sealed class Invoice : BaseEntity
         UpdatedAt = DateTimeOffset.UtcNow;
 
         AddDomainEvent(new InvoiceStatusChangedDomainEvent(
-            Id, Guid.Empty, InvoiceNumber.Value, oldStatus, Status));
+            Id, TenantId, InvoiceNumber.Value, oldStatus, Status));
         AddDomainEvent(new InvoiceOverdueDetectedDomainEvent(
-            Id, Guid.Empty, InvoiceNumber.Value, TotalAmount, Currency, DueDate));
+            Id, TenantId, InvoiceNumber.Value, TotalAmount, Currency, DueDate));
 
         return Result.Success();
     }
@@ -195,7 +196,7 @@ public sealed class Invoice : BaseEntity
         UpdatedAt = DateTimeOffset.UtcNow;
 
         AddDomainEvent(new InvoiceStatusChangedDomainEvent(
-            Id, Guid.Empty, InvoiceNumber.Value, oldStatus, Status));
+            Id, TenantId, InvoiceNumber.Value, oldStatus, Status));
 
         return Result.Success();
     }

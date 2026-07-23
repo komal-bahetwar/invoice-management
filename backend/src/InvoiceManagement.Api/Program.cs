@@ -10,84 +10,79 @@ using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
 
-//namespace InvoiceManagement.Api;
+var builder = WebApplication.CreateBuilder(args);
 
-// public static class Program
-// {
-//     public static async Task Main(string[] args)
-//     {
-         var builder = WebApplication.CreateBuilder(args);
+// ---- Serilog ----
+builder.Host.UseSerilog((context, config) =>
+{
+    config.ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Application", "InvoiceManagement.Api")
+        .WriteTo.Console()
+        .WriteTo.Seq(context.Configuration.GetConnectionString("Seq") ?? "http://localhost:5341");
+});
 
-        // ---- Serilog ----
-        builder.Host.UseSerilog((context, config) =>
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+// ---- Multi-Tenancy (Finbuckle) ----
+builder.Services.AddMultiTenant<TenantInfo>()
+    .WithHeaderStrategy("X-Tenant-Id")
+    .WithInMemoryStore(options =>
+    {
+        // Seed development tenants.
+        // Schema naming: Finbuckle auto-generates schemas as `tenant_{Identifier}`,
+        // e.g. `tenant_dev-tenant` for the dev tenant. To customize schema names,
+        // create a custom ITenantInfo subclass with an Items/Schema property.
+        options.Tenants.Add(new TenantInfo
         {
-            config.ReadFrom.Configuration(context.Configuration)
-                  .Enrich.FromLogContext()
-                  .Enrich.WithProperty("Application", "InvoiceManagement.Api")
-                  .WriteTo.Console()
-                  .WriteTo.Seq(context.Configuration.GetConnectionString("Seq") ?? "http://localhost:5341");
+            Id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            Identifier = "dev-tenant",
+            Name = "Development Tenant"
         });
+    });
 
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+// ---- EF Core (Schema-per-tenant via Finbuckle) ----
+builder.Services.AddDbContext<InvoicingDbContext>((sp, options) =>
+{
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.MigrationsAssembly(typeof(InvoicingDbContext).Assembly.FullName);
+    });
+});
 
-        // ---- Multi-Tenancy (Finbuckle) ----
-        builder.Services.AddMultiTenant<TenantInfo>()
-            .WithHeaderStrategy("X-Tenant-Id")
-            .WithInMemoryStore(options =>
-            {
-                // Seed a development tenant
-                options.Tenants.Add(new TenantInfo
-                {
-                    Id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                    Identifier = "dev-tenant",
-                    Name = "Development Tenant"
-                });
-            });
+// ---- Module Registration ----
+builder.Services.AddInvoicingModule();
 
-        // ---- EF Core (Schema-per-tenant via Finbuckle) ----
-        builder.Services.AddDbContext<InvoicingDbContext>((sp, options) =>
-        {
-            options.UseSqlServer(connectionString, sqlOptions =>
-            {
-                sqlOptions.MigrationsAssembly(typeof(InvoicingDbContext).Assembly.FullName);
-            });
-        });
+// ---- Controllers ----
+builder.Services.AddControllers();
 
-        // ---- Module Registration ----
-        builder.Services.AddInvoicingModule();
+// ---- OpenAPI ----
+builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
 
-        // ---- Controllers ----
-        builder.Services.AddControllers();
+// ---- Exception Handling ----
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
-        // ---- OpenAPI ----
-        builder.Services.AddOpenApi();
-        builder.Services.AddEndpointsApiExplorer();
+// ---- Health Checks ----
+builder.Services.AddHealthChecks();
 
-        // ---- Exception Handling ----
-        builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-        builder.Services.AddProblemDetails();
+var app = builder.Build();
 
-        // ---- Health Checks ----
-        builder.Services.AddHealthChecks();
+// ---- Middleware Pipeline ----
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+    await app.UseDatabaseMigrationAsync();
+}
 
-        var app = builder.Build();
+app.UseSerilogRequestLogging();
+app.UseExceptionHandler();
+app.UseMultiTenant();
+app.MapControllers();
+app.MapHealthChecks("/health");
 
-        // ---- Middleware Pipeline ----
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-            app.MapScalarApiReference();
-            await app.UseDatabaseMigrationAsync();
-        }
-
-        app.UseSerilogRequestLogging();
-        app.UseExceptionHandler();
-        app.UseMultiTenant();
-        app.MapControllers();
-        app.MapHealthChecks("/health");
-
-        await app.RunAsync();
-    //}
-//}
+await app.RunAsync();
 
 public partial class Program;

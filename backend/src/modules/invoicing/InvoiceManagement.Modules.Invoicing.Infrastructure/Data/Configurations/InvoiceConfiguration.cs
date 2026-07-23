@@ -70,6 +70,11 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>
         builder.HasIndex(i => i.IssueDate);
         builder.HasIndex(i => new { i.Status, i.DueDate });
 
+        builder.Property(i => i.TenantId)
+            .IsRequired();
+
+        builder.HasIndex(i => i.TenantId);
+
         builder.Property(i => i.RowVersion)
             .IsRowVersion();
 
