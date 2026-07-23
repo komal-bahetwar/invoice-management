@@ -13,15 +13,18 @@ public sealed class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceC
 {
     private readonly IInvoiceRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ITenantProvider _tenantProvider;
     private readonly ILogger<CreateInvoiceCommandHandler> _logger;
 
     public CreateInvoiceCommandHandler(
         IInvoiceRepository repository,
         IUnitOfWork unitOfWork,
+        ITenantProvider tenantProvider,
         ILogger<CreateInvoiceCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _tenantProvider = tenantProvider;
         _logger = logger;
     }
 
@@ -52,7 +55,10 @@ public sealed class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceC
             return Result<InvoiceDto>.Failure($"Invoice number {invoiceNumber.Value} already exists.");
         }
 
-        // Create invoice (tenant ID will be set from context)
+        // Resolve tenant ID from multi-tenant context
+        var tenantId = _tenantProvider.GetTenantId();
+
+        // Create invoice
         var createResult = Invoice.Create(
             invoiceNumber,
             request.CustomerName,
@@ -64,7 +70,7 @@ public sealed class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceC
             request.Currency,
             request.Notes,
             lineItems,
-            Guid.Empty); // Tenant ID resolved by Finbuckle middleware
+            tenantId);
 
         if (createResult.IsFailure)
             return Result<InvoiceDto>.Failure(createResult.Errors);

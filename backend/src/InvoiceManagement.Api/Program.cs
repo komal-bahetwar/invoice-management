@@ -1,4 +1,8 @@
 using Finbuckle.MultiTenant;
+using Finbuckle.MultiTenant.Abstractions;
+using Finbuckle.MultiTenant.AspNetCore.Extensions;
+using Finbuckle.MultiTenant.Extensions;
+using InvoiceManagement.Api.Extensions;
 using InvoiceManagement.Api.Middleware;
 using InvoiceManagement.Modules.Invoicing.Api;
 using InvoiceManagement.Modules.Invoicing.Infrastructure.Data;
@@ -24,21 +28,19 @@ using Serilog;
                   .WriteTo.Seq(context.Configuration.GetConnectionString("Seq") ?? "http://localhost:5341");
         });
 
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-            ?? "Server=localhost,1433;Database=InvoiceManagement;User Id=sa;Password=YourStrong!Pass;TrustServerCertificate=True;";
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
         // ---- Multi-Tenancy (Finbuckle) ----
         builder.Services.AddMultiTenant<TenantInfo>()
-            //.WithHeaderStrategy("X-Tenant-Id")
+            .WithHeaderStrategy("X-Tenant-Id")
             .WithInMemoryStore(options =>
             {
                 // Seed a development tenant
                 options.Tenants.Add(new TenantInfo
                 {
-                    Id = "tenant-dev-001",
+                    Id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     Identifier = "dev-tenant",
-                    Name = "Development Tenant",
-                    //ConnectionString = connectionString
+                    Name = "Development Tenant"
                 });
             });
 
@@ -74,12 +76,13 @@ using Serilog;
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
-            //app.MapScalarReferencePage();
+            app.MapScalarApiReference();
+            await app.UseDatabaseMigrationAsync();
         }
 
         app.UseSerilogRequestLogging();
         app.UseExceptionHandler();
-        //app.UseMultiTenant();
+        app.UseMultiTenant();
         app.MapControllers();
         app.MapHealthChecks("/health");
 

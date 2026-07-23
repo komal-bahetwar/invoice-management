@@ -1,5 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 using Finbuckle.MultiTenant.EntityFrameworkCore;
+using InvoiceManagement.Common.Domain;
 using InvoiceManagement.Modules.Invoicing.Domain.Entities;
 using InvoiceManagement.Modules.Invoicing.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,8 @@ public sealed class InvoicingDbContext : MultiTenantDbContext, IUnitOfWork
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Ignore<DomainEvent>();
+        
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(InvoicingDbContext).Assembly);
     }
 }

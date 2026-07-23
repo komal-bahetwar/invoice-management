@@ -34,6 +34,9 @@ public static class DependencyInjection
         services.AddScoped<Domain.Interfaces.IUnitOfWork>(
             sp => sp.GetRequiredService<Infrastructure.Data.InvoicingDbContext>());
 
+        // Register TenantProvider
+        services.AddScoped<Domain.Interfaces.ITenantProvider, Infrastructure.Tenant.TenantProvider>();
+
         return services;
     }
 }

@@ -1,5 +1,6 @@
 using InvoiceManagement.Modules.Invoicing.Domain.Entities;
 using InvoiceManagement.Modules.Invoicing.Domain.Interfaces;
+using InvoiceManagement.Modules.Invoicing.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace InvoiceManagement.Modules.Invoicing.Infrastructure.Repositories;
@@ -23,10 +24,20 @@ public sealed class InvoiceRepository : IInvoiceRepository
             .FirstOrDefaultAsync(i => i.Id == id, ct);
     }
 
+    // public async Task<Invoice?> GetByInvoiceNumberAsync(string invoiceNumber, CancellationToken ct = default)
+    // {
+    //     return await _context.Invoices
+    //         .FirstOrDefaultAsync(i => i.InvoiceNumber.Value == invoiceNumber, ct);
+    // }
+    
     public async Task<Invoice?> GetByInvoiceNumberAsync(string invoiceNumber, CancellationToken ct = default)
     {
+        // Create an instance of your Value Object first (use your specific constructor or factory method)
+        var targetInvoiceNumber = new InvoiceNumber(invoiceNumber); 
+        // Or if you use a factory: var targetInvoiceNumber = InvoiceNumber.Create(invoiceNumber);
+
         return await _context.Invoices
-            .FirstOrDefaultAsync(i => i.InvoiceNumber.Value == invoiceNumber, ct);
+            .FirstOrDefaultAsync(i => i.InvoiceNumber == targetInvoiceNumber, ct); //  Translates perfectly!
     }
 
     public async Task<(IReadOnlyList<Invoice> Items, int TotalCount)> ListAsync(

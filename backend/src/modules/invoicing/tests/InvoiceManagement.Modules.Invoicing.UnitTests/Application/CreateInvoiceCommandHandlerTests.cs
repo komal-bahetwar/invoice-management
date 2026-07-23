@@ -12,15 +12,17 @@ public class CreateInvoiceCommandHandlerTests
 {
     private readonly IInvoiceRepository _repository = Substitute.For<IInvoiceRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ITenantProvider _tenantProvider = Substitute.For<ITenantProvider>();
     private readonly ILogger<CreateInvoiceCommandHandler> _logger = Substitute.For<ILogger<CreateInvoiceCommandHandler>>();
     private readonly CreateInvoiceCommandHandler _handler;
 
     public CreateInvoiceCommandHandlerTests()
     {
-        _handler = new CreateInvoiceCommandHandler(_repository, _unitOfWork, _logger);
+        _handler = new CreateInvoiceCommandHandler(_repository, _unitOfWork, _tenantProvider, _logger);
         _repository.GetNextSequenceNumberAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(0);
         _repository.GetByInvoiceNumberAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((Invoice?)null);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
+        _tenantProvider.GetTenantId().Returns(Guid.NewGuid());
     }
 
     [Fact]

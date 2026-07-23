@@ -1,0 +1,177 @@
+### ============================================================
+### Invoice Management API — .http test file
+### Base URL: https://localhost:5001
+### IMPORTANT: X-Tenant-Id header is required on EVERY request.
+### ============================================================
+
+@baseUrl = https://localhost:5001
+@tenantId = dev-tenant
+
+### ----------------------------------------------------
+### 1. CREATE INVOICE
+### POST /api/invoices
+### ----------------------------------------------------
+
+# @name createInvoice
+POST {{baseUrl}}/api/invoices
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+    "customerName": "Acme Corp",
+    "customerEmail": "billing@acme.com",
+    "customerAddress": "123 Main St, Springfield, IL 62701",
+    "issueDate": "2026-07-01T00:00:00Z",
+    "dueDate": "2026-08-01T00:00:00Z",
+    "taxRate": 8.5,
+    "currency": "USD",
+    "notes": "Net 30 terms. Please remit payment by due date.",
+    "lineItems": [
+        {
+            "description": "Web Development Services — Q2 Sprint",
+            "quantity": 1,
+            "unitPrice": 5000.00
+        },
+        {
+            "description": "Cloud Infrastructure — AWS Hosting (monthly)",
+            "quantity": 3,
+            "unitPrice": 250.00
+        },
+        {
+            "description": "UI/UX Design Consultation",
+            "quantity": 2,
+            "unitPrice": 800.00
+        }
+    ]
+}
+
+### ----------------------------------------------------
+### 2. LIST INVOICES (with pagination & filters)
+### GET /api/invoices
+### ----------------------------------------------------
+
+# Basic list with defaults (page=1, pageSize=20)
+GET {{baseUrl}}/api/invoices
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Paginated: page 2, 5 per page
+GET {{baseUrl}}/api/invoices?page=2&pageSize=5
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Filter by status
+GET {{baseUrl}}/api/invoices?status=Draft
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Filter by date range
+GET {{baseUrl}}/api/invoices?fromDate=2026-01-01T00:00:00Z&toDate=2026-12-31T23:59:59Z
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Search by customer name or invoice number
+GET {{baseUrl}}/api/invoices?search=Acme
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Combined filters
+GET {{baseUrl}}/api/invoices?page=1&pageSize=10&status=Sent&search=Corp&fromDate=2026-06-01T00:00:00Z&toDate=2026-08-31T23:59:59Z
+X-Tenant-Id: {{tenantId}}
+
+### ----------------------------------------------------
+### 3. GET INVOICE BY ID
+### GET /api/invoices/{id}
+### ----------------------------------------------------
+
+# Replace with an actual invoice ID (capture from createInvoice response above)
+GET {{baseUrl}}/api/invoices/00000000-0000-0000-0000-000000000001
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Use the ID from the createInvoice response variable
+GET {{baseUrl}}/api/invoices/{{createInvoice.response.body.data.id}}
+X-Tenant-Id: {{tenantId}}
+
+###
+
+# Non-existent invoice — expect 404
+GET {{baseUrl}}/api/invoices/00000000-0000-0000-0000-000000000000
+X-Tenant-Id: {{tenantId}}
+
+### ----------------------------------------------------
+### 4. UPDATE INVOICE STATUS
+### PATCH /api/invoices/{id}/status
+### ----------------------------------------------------
+
+# Draft → Sent (valid transition)
+PATCH {{baseUrl}}/api/invoices/00000000-0000-0000-0000-000000000001/status
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+    "invoiceId": "00000000-0000-0000-0000-000000000001",
+    "status": 2
+}
+
+###
+
+# Sent → Paid (valid transition)
+PATCH {{baseUrl}}/api/invoices/00000000-0000-0000-0000-000000000001/status
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+    "invoiceId": "00000000-0000-0000-0000-000000000001",
+    "status": 3
+}
+
+###
+
+# Draft → Cancelled (valid transition)
+PATCH {{baseUrl}}/api/invoices/00000000-0000-0000-0000-000000000001/status
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+    "invoiceId": "00000000-0000-0000-0000-000000000001",
+    "status": 5
+}
+
+###
+
+# Invalid transition: Paid → Draft — expect 409 Conflict
+PATCH {{baseUrl}}/api/invoices/00000000-0000-0000-0000-000000000001/status
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+    "invoiceId": "00000000-0000-0000-0000-000000000001",
+    "status": 1
+}
+
+###
+
+# ID mismatch between route and body — expect 400
+PATCH {{baseUrl}}/api/invoices/11111111-1111-1111-1111-111111111111/status
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+    "invoiceId": "00000000-0000-0000-0000-000000000001",
+    "status": 2
+}
+
+### ----------------------------------------------------
+### 5. DASHBOARD
+### GET /api/invoices/dashboard
+### ----------------------------------------------------
+
+GET {{baseUrl}}/api/invoices/dashboard
+X-Tenant-Id: {{tenantId}}

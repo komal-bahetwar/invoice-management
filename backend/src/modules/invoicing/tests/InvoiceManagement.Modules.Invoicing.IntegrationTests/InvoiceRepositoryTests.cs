@@ -14,6 +14,11 @@ namespace InvoiceManagement.Modules.Invoicing.IntegrationTests;
 
 public class InvoiceRepositoryTests : IAsyncLifetime
 {
+    private sealed class TestMultiTenantContextAccessor : IMultiTenantContextAccessor
+    {
+        public IMultiTenantContext? MultiTenantContext { get; set; }
+    }
+
     private readonly MsSqlContainer _sqlContainer = new MsSqlBuilder()
         .WithPassword("YourStrong!Pass")
         .Build();
@@ -37,9 +42,8 @@ public class InvoiceRepositoryTests : IAsyncLifetime
             Name = "Test Tenant"
         };
 
-        var multiTenantContext = new MultiTenantContext<TenantInfo> { TenantInfo = tenantInfo };
-        //TODO
-        IMultiTenantContextAccessor accessor = null;//new SimpleMultiTenantContextAccessor(multiTenantContext);
+        var multiTenantContext = new MultiTenantContext<TenantInfo>(tenantInfo);
+        var accessor = new TestMultiTenantContextAccessor { MultiTenantContext = multiTenantContext };
 
         _context = new InvoicingDbContext(accessor, options);
         await _context.Database.EnsureCreatedAsync();
@@ -137,15 +141,15 @@ public class InvoiceRepositoryTests : IAsyncLifetime
         var options = new DbContextOptionsBuilder<InvoicingDbContext>()
             .UseSqlServer(_sqlContainer.GetConnectionString())
             .Options;
-        var tenantInfo = new Finbuckle.MultiTenant.TenantInfo
+        var tenantInfo2 = new TenantInfo
         {
             Id = "test-tenant",
             Identifier = "test-tenant",
             Name = "Test Tenant"
         };
 
-        //TODO
-        await using var context2 = new InvoicingDbContext(null, options);
+        var accessor2 = new TestMultiTenantContextAccessor { MultiTenantContext = new MultiTenantContext<TenantInfo>(tenantInfo2) };
+        await using var context2 = new InvoicingDbContext(accessor2, options);
         var invoiceInContext2 = await context2.Invoices.FindAsync(invoice.Id);
         invoiceInContext2!.MarkAsSent();
         await context2.SaveChangesAsync();
