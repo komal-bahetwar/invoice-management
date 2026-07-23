@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>InvoiceManagement.Modules.Invoicing.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InvoiceManagement.Modules.Invoicing.Application\InvoiceManagement.Modules.Invoicing.Application.csproj" />
+    <ProjectReference Include="..\InvoiceManagement.Modules.Invoicing.Infrastructure\InvoiceManagement.Modules.Invoicing.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

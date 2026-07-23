@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>InvoiceManagement.ArchitectureTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InvoiceManagement.Api\InvoiceManagement.Api.csproj" />
+    <ProjectReference Include="..\..\src\common\InvoiceManagement.Common.Domain\InvoiceManagement.Common.Domain.csproj" />
+    <ProjectReference Include="..\..\src\common\InvoiceManagement.Common.Infrastructure\InvoiceManagement.Common.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\modules\invoicing\InvoiceManagement.Modules.Invoicing.Domain\InvoiceManagement.Modules.Invoicing.Domain.csproj" />
+    <ProjectReference Include="..\..\src\modules\invoicing\InvoiceManagement.Modules.Invoicing.Application\InvoiceManagement.Modules.Invoicing.Application.csproj" />
+    <ProjectReference Include="..\..\src\modules\invoicing\InvoiceManagement.Modules.Invoicing.Infrastructure\InvoiceManagement.Modules.Invoicing.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\modules\invoicing\InvoiceManagement.Modules.Invoicing.Api\InvoiceManagement.Modules.Invoicing.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+    <PackageReference Include="NetArchTest.Rules" Version="1.3.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

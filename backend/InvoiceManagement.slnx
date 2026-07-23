@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/common/">
+    <Project Path="src/common/InvoiceManagement.Common.Domain/InvoiceManagement.Common.Domain.csproj" />
+    <Project Path="src/common/InvoiceManagement.Common.Infrastructure/InvoiceManagement.Common.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/modules/" />
+  <Folder Name="/src/modules/invoicing/">
+    <Project Path="src/modules/invoicing/InvoiceManagement.Modules.Invoicing.Domain/InvoiceManagement.Modules.Invoicing.Domain.csproj" />
+    <Project Path="src/modules/invoicing/InvoiceManagement.Modules.Invoicing.Application/InvoiceManagement.Modules.Invoicing.Application.csproj" />
+    <Project Path="src/modules/invoicing/InvoiceManagement.Modules.Invoicing.Infrastructure/InvoiceManagement.Modules.Invoicing.Infrastructure.csproj" />
+    <Project Path="src/modules/invoicing/InvoiceManagement.Modules.Invoicing.Api/InvoiceManagement.Modules.Invoicing.Api.csproj" />
+  </Folder>  
+  <Folder Name="/src/modules/invoicing/tests/">
+      <Project Path="src/modules/invoicing/tests/InvoiceManagement.Modules.Invoicing.UnitTests/InvoiceManagement.Modules.Invoicing.UnitTests.csproj" />
+      <Project Path="src/modules/invoicing/tests/InvoiceManagement.Modules.Invoicing.IntegrationTests/InvoiceManagement.Modules.Invoicing.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/src/InvoiceManagement.Api/">
+    <Project Path="src/InvoiceManagement.Api/InvoiceManagement.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/InvoiceManagement.AppHost/">
+    <Project Path="src/InvoiceManagement.AppHost/InvoiceManagement.AppHost.csproj" />
+  </Folder>
+  <Folder Name="/src/InvoiceManagement.Migrator/">
+    <Project Path="src/InvoiceManagement.Migrator/InvoiceManagement.Migrator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InvoiceManagement.Api.IntegrationTests/InvoiceManagement.Api.IntegrationTests.csproj" />
+    <Project Path="tests/InvoiceManagement.ArchitectureTests/InvoiceManagement.ArchitectureTests.csproj" />
+    <Project Path="tests/InvoiceManagement.Common.Tests/InvoiceManagement.Common.Tests.csproj" />
+  </Folder>
+</Solution>
