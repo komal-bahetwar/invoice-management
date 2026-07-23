@@ -22,20 +22,11 @@ public static class DatabaseExtensions
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<InvoicingDbContext>();
 
-            var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
-
-            if (pendingMigrations.Any())
-            {
-                logger.LogInformation("Applying {Count} pending migration(s)...", pendingMigrations.Count());
-                await dbContext.Database.MigrateAsync();
-                logger.LogInformation("Migrations applied successfully.");
-            }
-            else
-            {
-                logger.LogInformation("No pending migrations. Ensuring database is created...");
-                await dbContext.Database.EnsureCreatedAsync();
-                logger.LogInformation("Database ready.");
-            }
+            // Always use MigrateAsync() — EnsureCreatedAsync() can create tables
+            // from a stale model snapshot that doesn't include recent column additions.
+            logger.LogInformation("Applying database migrations...");
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied successfully.");
         }
         catch (Exception ex)
         {

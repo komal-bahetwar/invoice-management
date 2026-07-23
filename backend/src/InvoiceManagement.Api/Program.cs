@@ -9,6 +9,7 @@ using InvoiceManagement.Modules.Invoicing.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,9 @@ builder.Services.AddMultiTenant<TenantInfo>()
         });
     });
 
+// ---- Authentication & Authorization (JWT Bearer) ----
+builder.Services.AddInvoiceManagementAuthentication(builder.Configuration);
+
 // ---- EF Core (Schema-per-tenant via Finbuckle) ----
 builder.Services.AddDbContext<InvoicingDbContext>((sp, options) =>
 {
@@ -61,11 +65,31 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
 // ---- Exception Handling ----
+// Order matters: ValidationExceptionHandler must be registered first so it
+// intercepts FluentValidation exceptions before the generic GlobalExceptionHandler.
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // ---- Health Checks ----
 builder.Services.AddHealthChecks();
+
+// ---- Rate Limiting ----
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy<string>("GlobalLimit", _ =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: "global",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
 
 var app = builder.Build();
 
@@ -80,6 +104,9 @@ if (app.Environment.IsDevelopment())
 app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 app.UseMultiTenant();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.MapHealthChecks("/health");
 

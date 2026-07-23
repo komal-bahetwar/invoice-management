@@ -1,6 +1,10 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using InvoiceManagement.Modules.Invoicing.Application.DTOs;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.IdentityModel.Tokens;
 using Shouldly;
 using Xunit;
 
@@ -8,12 +12,46 @@ namespace InvoiceManagement.Api.IntegrationTests;
 
 public class InvoicesApiTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private const string SecretKey = "dev-secret-key-at-least-32-characters-long!!";
+    private const string Issuer = "InvoiceManagement.Api";
+    private const string Audience = "InvoiceManagement.Api";
+
     private readonly HttpClient _client;
 
     public InvoicesApiTests(WebApplicationFactory<Program> factory)
     {
         _client = factory.CreateClient();
         _client.DefaultRequestHeaders.Add("X-Tenant-Id", "dev-tenant");
+        _client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", CreateTestToken());
+    }
+
+    /// <summary>
+    /// Generates a valid JWT for integration testing using the same symmetric key
+    /// configured in appsettings.Development.json.
+    /// </summary>
+    private static string CreateTestToken()
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SecretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "test-user"),
+                new Claim(ClaimTypes.Name, "Test User"),
+                new Claim("tenant_id", "dev-tenant")
+            }),
+            Expires = DateTime.UtcNow.AddHours(1),
+            Issuer = Issuer,
+            Audience = Audience,
+            SigningCredentials = credentials
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 
     [Fact]
@@ -55,6 +93,30 @@ public class InvoicesApiTests : IClassFixture<WebApplicationFactory<Program>>
             taxRate = 10.0,
             currency = "USD",
             lineItems = Array.Empty<object>()
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/invoices", request);
+
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateInvoice_ExceedsMaxLength_ShouldReturn400()
+    {
+        // Domain validation only checks null/whitespace; FluentValidation enforces max length.
+        // A 256-char name should trigger FluentValidation pipeline behavior → 400.
+        var request = new
+        {
+            customerName = new string('A', 256),
+            customerEmail = "valid@email.com",
+            issueDate = "2026-07-01T00:00:00Z",
+            dueDate = "2026-08-01T00:00:00Z",
+            taxRate = 10.0,
+            currency = "USD",
+            lineItems = new[]
+            {
+                new { description = "Test line item", quantity = 5, unitPrice = 100.00 }
+            }
         };
 
         var response = await _client.PostAsJsonAsync("/api/invoices", request);

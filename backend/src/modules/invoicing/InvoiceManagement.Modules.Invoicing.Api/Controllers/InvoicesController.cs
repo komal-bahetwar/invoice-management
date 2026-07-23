@@ -6,14 +6,17 @@ using InvoiceManagement.Modules.Invoicing.Application.Queries.GetDashboard;
 using InvoiceManagement.Modules.Invoicing.Application.Queries.GetInvoice;
 using InvoiceManagement.Modules.Invoicing.Application.Queries.ListInvoices;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace InvoiceManagement.Modules.Invoicing.Api.Controllers;
 
 [ApiController]
 [Route("api/invoices")]
+[Authorize]
+[EnableRateLimiting("GlobalLimit")]
 public sealed class InvoicesController : ControllerBase
 {
     private readonly IMediator _mediator;
