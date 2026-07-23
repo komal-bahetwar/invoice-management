@@ -1,18 +1,23 @@
 ### ============================================================
 ### Invoice Management API — .http test file
 ### Base URL: https://localhost:5001
-### IMPORTANT: X-Tenant-Id AND Authorization headers required on EVERY request.
+###
+### HOW TO USE:
+###   1. Run "0. GENERATE AUTH TOKEN" first
+###   2. Copy the accessToken value from the response
+###   3. Paste it below replacing YOUR_TOKEN_HERE
+###   4. Run any other request
 ### ============================================================
 
 @baseUrl = https://localhost:5001
 @tenantId = dev-tenant
+@authToken = YOUR_TOKEN_HERE
 
 ### ----------------------------------------------------
-### 0. GENERATE AUTH TOKEN (run this first!)
+### 0. GENERATE AUTH TOKEN (run this first, copy the accessToken!)
 ### POST /api/auth/token
 ### ----------------------------------------------------
 
-# @name getToken
 POST {{baseUrl}}/api/auth/token
 Content-Type: application/json
 
@@ -20,10 +25,6 @@ Content-Type: application/json
     "username": "dev-user",
     "tenantId": "dev-tenant"
 }
-
-###
-# Store the token from the response above:
-@authToken = {{getToken.response.body.accessToken}}
 
 ### ----------------------------------------------------
 ### 1. CREATE INVOICE
@@ -37,7 +38,7 @@ X-Tenant-Id: {{tenantId}}
 Authorization: Bearer {{authToken}}
 
 {
-    "customerName": "Acme Corp",
+    "customerName": "Acme Corp1",
     "customerEmail": "billing@acme.com",
     "customerAddress": "123 Main St, Springfield, IL 62701",
     "issueDate": "2026-07-01T00:00:00Z",
@@ -72,7 +73,7 @@ Authorization: Bearer {{authToken}}
 # Basic list with defaults (page=1, pageSize=20)
 GET {{baseUrl}}/api/invoices
 X-Tenant-Id: {{tenantId}}
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJkZXYtdXNlciIsInVuaXF1ZV9uYW1lIjoiZGV2LXVzZXIiLCJ0ZW5hbnRfaWQiOiJkZXYtdGVuYW50IiwibmJmIjoxNzg0ODMzODI1LCJleHAiOjE3ODQ4Mzc0MjUsImlhdCI6MTc4NDgzMzgyNSwiaXNzIjoiSW52b2ljZU1hbmFnZW1lbnQuQXBpIiwiYXVkIjoiSW52b2ljZU1hbmFnZW1lbnQuQXBpIn0.Z9QYfN2AZ5ZqR63WOjwVUac2voYwTEB_kN51HJrz80U
+Authorization: Bearer {{authToken}}
 
 ###
 
