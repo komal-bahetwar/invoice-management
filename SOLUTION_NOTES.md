@@ -261,11 +261,22 @@ See `CreateInvoiceCommandValidator.cs` and `UpdateInvoiceStatusCommandValidator.
 
 ## 11. Azure Deployment and Monitoring Considerations
 
+### Why Azure Container Apps (ACA)?
+
+This project uses **.NET Aspire** (`AppHost.cs`) for local development orchestration. ACA is the **native, first-class deployment target** for .NET Aspire — the same `AppHost` that provisions local containers becomes the deployment manifest in production via `azd up`. This eliminates the gap between dev and production.
+
+ACA provides **serverless Kubernetes** (built on AKS, managed by Microsoft) with:
+- **No cluster management**: No node pools, no YAML, no RBAC to configure
+- **Scale-to-zero**: Ideal for dev/staging environments; pay only for what you use
+- **Revision-based rollouts**: Zero-downtime deployments with instant rollback via revision history
+- **Managed Identity integration**: Passwordless connections to Azure SQL, Service Bus, and Key Vault — no connection strings to manage
+- **Native OpenTelemetry**: Aspire's `ServiceDefaults` traces flow directly into Application Insights with zero code changes
+
 ### Services
 
 | Azure Service | Purpose |
 |---|---|
-| **Azure App Service** | Host the ASP.NET Core API (Linux, B1/B2 tier) |
+| **Azure Container Apps** | Host the API as a container with serverless scaling and native Aspire integration |
 | **Azure SQL Database** | Managed SQL Server with geo-replication |
 | **Azure Service Bus** | MassTransit transport for domain events (replace in-memory dev transport) |
 | **Azure Container Registry** | Store Docker images for CI/CD |
@@ -275,24 +286,35 @@ See `CreateInvoiceCommandValidator.cs` and `UpdateInvoiceStatusCommandValidator.
 
 ### Deployment Strategy
 
-- **CI/CD**: GitHub Actions → build, test, publish Docker image → deploy to App Service deployment slot
-- **Slots**: Staging slot for zero-downtime deployment + smoke tests → swap to production
-- **Rollback**: Re-swap slots (instant rollback)
+- **Dev/Test**: `azd up` from local machine — provisions all Azure resources (ACA, SQL DB, Service Bus, Key Vault, App Insights), builds Docker images, pushes to ACR, and deploys to ACA in a single command
+- **CI/CD**: `azd pipeline config` bootstraps GitHub Actions with OIDC authentication (no stored secrets); merge to `main` triggers `azd deploy` for automated rollout
+- **Zero-downtime**: ACA revision-based deployments with traffic splitting — deploy new revision → run smoke tests → shift 100% traffic → deactivate old revision
+- **Rollback**: Reactivate a previous ACA revision (instant, no rebuild needed)
 - **Migrations**: Run by Migrator container as a pre-deployment step; idempotent EF Core migrations
 
 ### Scaling
 
-- **Horizontal**: Scale App Service instances based on CPU/memory metrics
+- **Horizontal**: ACA HTTP/event-driven autoscaling based on concurrent requests, CPU, or memory — with scale-to-zero for cost efficiency in low-traffic periods
 - **Database**: Azure SQL elastic pool for multi-tenant cost efficiency
 - **Caching**: Add Redis cache layer for dashboard projections when tenant count grows
 - **Tenant onboarding**: Automate schema provisioning as part of tenant registration
 
 ### Monitoring
 
-- **Health checks**: `/health` endpoint for load balancer probes
+- **Health checks**: `/health` endpoint for ACA health probes (liveness + readiness)
 - **Structured logging**: Serilog → Application Insights for queryable logs
-- **Distributed tracing**: OpenTelemetry spans across API → DB → Service Bus
+- **Distributed tracing**: OpenTelemetry spans flow natively from Aspire `ServiceDefaults` → Application Insights (API → DB → Service Bus, all correlated)
+- **Aspire Dashboard in production**: Local dev dashboard maps to Application Insights Application Map in Azure — same traces, same structure, zero code changes
 - **Alerting**: Failed requests > threshold, DB DTU > 80%, overdue detection failures
+
+### Why Not App Service or AKS?
+
+| Option | When to Consider | Why It's Not the Default Here |
+|---|---|---|
+| **Azure App Service** | Simple single-container API with no orchestration needs | Doesn't support .NET Aspire's multi-container topology; bypasses the `AppHost` investment; connection strings and infra managed separately |
+| **Azure Kubernetes Service (AKS)** | Enterprise platform teams with existing clusters, strict VNet isolation, service mesh (Istio), or multi-cloud portability | Massive operational overhead (node pools, RBAC, Ingress, cert-manager); ~$70+/mo minimum even idle; requires `Aspirate` tool to bridge Aspire → K8s YAML |
+
+AKS is the natural **future evolution path** if the platform grows to require custom network policies, namespace-level tenant isolation, or GitOps-based multi-cluster deployments. The ACA → AKS migration path is straightforward since both run containers — when the time comes, use **Aspirate** to generate Kubernetes manifests from the same `AppHost.cs` and deploy to AKS via ArgoCD/Flux. For this assessment scope, ACA is the pragmatic choice.
 
 ## 12. Security Considerations
 
@@ -302,7 +324,7 @@ See `CreateInvoiceCommandValidator.cs` and `UpdateInvoiceStatusCommandValidator.
 - **HTTPS**: Enforced in production
 - **RowVersion**: Prevents lost updates via optimistic concurrency
 - **No SQL injection**: EF Core parameterized queries throughout
-- **Least privilege**: App Service connects to SQL with limited permissions (no DDL at runtime; migrator handles DDL)
+- **Least privilege**: Container App connects to SQL with limited permissions (no DDL at runtime; migrator handles DDL)
 
 ## 13. Known Limitations
 
