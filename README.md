@@ -20,7 +20,7 @@ dotnet workload install aspire
 dotnet run --project backend/src/InvoiceManagement.AppHost
 ```
 
-The API will be available at `https://localhost:7101` and the Scalar API docs at `https://localhost:7101/scalar/v1`.
+The API port is assigned dynamically by Aspire — check the console output or Aspire dashboard for the exact URL. The Scalar API docs are available at `{baseUrl}/scalar/v1`.
 
 ### Run API only (requires SQL Server running separately)
 
@@ -39,14 +39,51 @@ dotnet run --project backend/src/InvoiceManagement.Api
 
 ```bash
 # All tests
-dotnet test backend/InvoiceManagement.sln
+dotnet test backend/InvoiceManagement.slnx
 
 # Unit tests only
 dotnet test backend/src/modules/invoicing/tests/InvoiceManagement.Modules.Invoicing.UnitTests
 
 # Architecture tests
 dotnet test backend/tests/InvoiceManagement.ArchitectureTests
+
+# API integration tests (requires SQL Server running)
+dotnet test backend/tests/InvoiceManagement.Api.IntegrationTests
 ```
+
+## Authentication
+
+All API endpoints (except `POST /api/auth/token`) require JWT Bearer authentication.
+
+### Generating a Token (Development)
+
+Use the dev-only token endpoint or the `.http` test file:
+
+```bash
+# Generate a token
+curl -k -X POST https://localhost:<port>/api/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"dev-user","tenantId":"dev-tenant"}'
+```
+
+Pass the `accessToken` from the response as `Authorization: Bearer <token>` on all subsequent requests.
+
+### Using the HTTP Test File
+
+Open `backend/src/InvoiceManagement.Api/Invoices.http` in VS Code (requires [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension):
+
+1. Run the "GENERATE AUTH TOKEN" request
+2. Copy the `accessToken` from the response
+3. Replace `YOUR_TOKEN_HERE` at the top of the file
+4. Run any other request — all use `{{authToken}}`
+
+### Security Features
+
+- **JWT Bearer authentication** — all endpoints protected with `[Authorize]`
+- **Schema-per-tenant isolation** — `X-Tenant-Id` header routes data to tenant-specific schemas
+- **Rate limiting** — 100 requests/minute per endpoint (returns 429 when exceeded)
+- **Optimistic concurrency** — `RowVersion` prevents lost updates on status changes
+- **Input validation** — FluentValidation + domain-level validation on all inputs
 
 ## Architecture
 
@@ -60,19 +97,24 @@ All architectural decisions are documented in `docs/architecture/architecture-de
 
 ## API Endpoints
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| `POST` | `/api/invoices` | Create a new invoice |
-| `GET` | `/api/invoices` | List invoices (paginated, filterable) |
-| `GET` | `/api/invoices/{id}` | View invoice details |
-| `PATCH` | `/api/invoices/{id}/status` | Update invoice status |
-| `GET` | `/api/invoices/dashboard` | Invoice summary/dashboard |
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/auth/token` | No | Generate dev JWT (development only) |
+| `POST` | `/api/invoices` | Bearer JWT | Create a new invoice |
+| `GET` | `/api/invoices` | Bearer JWT | List invoices (paginated, filterable) |
+| `GET` | `/api/invoices/{id}` | Bearer JWT | View invoice details |
+| `PATCH` | `/api/invoices/{id}/status` | Bearer JWT | Update invoice status |
+| `GET` | `/api/invoices/dashboard` | Bearer JWT | Invoice summary/dashboard |
+
+**Required headers on every authenticated request:**
+- `Authorization: Bearer <token>`
+- `X-Tenant-Id: <tenant-identifier>`
 
 ## Project Structure
 
 ```
 backend/
-├── InvoiceManagement.sln
+├── InvoiceManagement.slnx
 ├── src/
 │   ├── common/
 │   │   ├── InvoiceManagement.Common.Domain/          # Shared kernel
