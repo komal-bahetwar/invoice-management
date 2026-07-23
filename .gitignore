@@ -66,3 +66,4 @@ publish_output/
 .DS_Store
 .vscode/scratch/
 scratch/
+.vscode
